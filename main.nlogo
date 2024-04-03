@@ -778,12 +778,37 @@ end
 ; Update the day/night cycle and adjust opacity.
 to update-environment
   ; Condition to toggle day/night
-  ifelse ticks < 180 [
+
+  ;; will be daylight before this tick number
+  let night-at-tick 180
+  ifelse ticks < night-at-tick [
     set isNight false
-    ;ask patches [ set pcolor scale-color green elevation 0 10 ]
+    
+    ;; interupt daylight for sunset right before nighttime
+    ;; sunset is currently just visual and does not affect simulation
+    if ticks > night-at-tick - 20 [
+      ask patches [
+        ;; some pcolors are a list and require building a number from their RGBA
+        ifelse is-number? pcolor [
+          set pcolor scale-color pcolor 30 00 100
+        ] [
+          let color-number (item 0 pcolor * 65536) + (item 1 pcolor * 256) + item 2 pcolor
+          set pcolor scale-color color-number 30 00 100
+        ]
+      ]
+    ]
   ] [
     set isNight true
-    ask patches [ set pcolor scale-color green ticks 20 00 ]
+    ;ask patches [ set pcolor scale-color green ticks 20 00 ]
+    ask patches [
+      ;; some pcolors are a list and require building a number from their RGBA
+      ifelse is-number? pcolor [
+        set pcolor scale-color pcolor 10 00 100
+      ] [
+        let color-number (item 0 pcolor * 65536) + (item 1 pcolor * 256) + item 2 pcolor
+        set pcolor scale-color color-number 10 00 100
+      ]
+    ]
   ]
 end
 
