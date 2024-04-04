@@ -52,6 +52,10 @@ to setup
   set victory False
   setup-turtles
   reset-ticks
+  set american_casualties 0
+  set british_casualties 0
+  set reload-index 0
+  set hit-roll 0
 end
 
 
@@ -389,11 +393,11 @@ end
 
 
 to go
-  set american_casualties 0
-  set british_casualties 0
-  set reload-index 0
-  set hit-roll 0
-  while [not victory and ticks < 2000] [  ; Continue simulation until victory condition met
+
+  if victory or ticks >= 2000
+  [
+    stop
+  ]
     set hit-roll random-float 1
     move-turtles
     british-attack
@@ -411,7 +415,6 @@ to go
     set reload-index reload-index + 1
     tick
     print word "Ticks: " ticks
-  ]
 end
 to move-turtles
   if ticks >= 60[
@@ -783,7 +786,7 @@ to update-environment
   let night-at-tick 180
   ifelse ticks < night-at-tick [
     set isNight false
-    
+
     ;; interupt daylight for sunset right before nighttime
     ;; sunset is currently just visual and does not affect simulation
     if ticks > night-at-tick - 20 [
@@ -888,8 +891,8 @@ GRAPHICS-WINDOW
 300
 -250
 250
-0
-0
+1
+1
 1
 ticks
 30.0
