@@ -6,7 +6,6 @@ globals [
   num_british
   british_casualties
   walk
-  reload-index
   nighttime
   bayonet-acc
 ]
@@ -45,6 +44,7 @@ turtles-own [
   firing-rate            ; Rate of fire for the turtle
   max-shots              ; Maximum number of shots the turtle can fire
   reload                 ; Determines how many ticks before the turtle is ready to fire
+  reload-index
   shots
   target
   faction
@@ -60,7 +60,6 @@ to setup
   reset-ticks
   set american_casualties 0
   set british_casualties 0
-  set reload-index 0
   set nighttime 540
   set isNight false
 end
@@ -425,6 +424,12 @@ to setup-turtles
     set faction 1
     set retreating False
   ]
+
+  ask turtles [
+    set reload-index 0
+    set shots 0
+    set retreating False
+  ]
 end
 
 
@@ -556,17 +561,6 @@ to retreat-if-loss [breed-name threshold retreat-direction regroup-position]
   ]
 end
 
-to-report did-hit? [acc]
-  ifelse random-float 1 < acc
-  [
-    report true
-  ]
-  [
-    report false
-  ]
-end
-
-
 to british-attack
   ask british-cannon-6-pound [
     ;; Check for nearby enemies within firing range
@@ -574,16 +568,27 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the cannon once every 30 ticks
-      if reload-index mod reload < 1 [
+      ifelse reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? accuracy [
           ;; Reduce targets based on kills per hit
-          ask n-of 4 targets [
-            die
+          ifelse count targets < kills-per-hit [
+            set american_casualties american_casualties + count targets
+            ask targets[
+              die
+            ]
           ]
-          set american_casualties american_casualties + 4
-  			]
-  		]
+          [
+            set american_casualties american_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
+        			]
+      		][
+        set reload-index reload-index + 1
+      ]
     ]
   ]
   ask british-cannon-24-pound [
@@ -592,13 +597,23 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the cannon once every 60 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .25 [
           ;; Reduce targets based on kills per hit
-          ask n-of 20 targets [
-            die]
-          set american_casualties american_casualties + 20
+          ifelse count targets < kills-per-hit [
+            set american_casualties american_casualties + count targets
+            ask targets[
+              die
+            ]
+          ]
+          [
+            set american_casualties american_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
   			]
   		]
     ]
@@ -609,13 +624,23 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the cannon once every 60 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .2 [
           ;; Reduce targets based on kills per hit
-          ask n-of 9 targets [
-            die]
-          set american_casualties american_casualties + 9
+          ifelse count targets < kills-per-hit [
+            set american_casualties american_casualties + count targets
+            ask targets[
+              die
+            ]
+          ]
+          [
+            set american_casualties american_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
   			]
   		]
     ]
@@ -626,13 +651,23 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the cannon once every 120 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .005 [
           ;; Reduce targets based on kills per hit
-          ask n-of 9 targets [
-            die]
-          set american_casualties american_casualties + 9
+          ifelse count targets < kills-per-hit [
+            set american_casualties american_casualties + count targets
+            ask targets[
+              die
+            ]
+          ]
+          [
+            set american_casualties american_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
   			]
   		]
     ]
@@ -644,7 +679,7 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 17 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? accuracy [
           ;; Reduce targets based on kills per hit
@@ -661,7 +696,7 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;;; Fire the musket once every 17 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .01 [
           ;; Reduce targets based on kills per hit
@@ -678,7 +713,7 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 17 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .02 [
           ;; Reduce targets based on kills per hit
@@ -699,7 +734,7 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 17 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? 0.02 [
           ;; Reduce targets based on kills per hit
@@ -716,7 +751,7 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 17 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? 0.02 [
           ;; Reduce targets based on kills per hit
@@ -733,7 +768,7 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 9 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? 0.02 [
           ;; Reduce targets based on kills per hit
@@ -750,7 +785,7 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 30 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
           if did-hit? 0.015 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
@@ -766,13 +801,23 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 30 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .15 [
           ;; Reduce targets based on kills per hit
-          ask n-of 4 targets [
-            die]
-          set british_casualties british_casualties + 4
+          ifelse count targets < kills-per-hit [
+            set british_casualties british_casualties + count targets
+            ask targets[
+              die
+            ]
+          ]
+          [
+            set british_casualties british_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
   			]
   		]
     ]
@@ -783,13 +828,23 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 60 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .15 [
           ;; Reduce targets based on kills per hit
-          ask n-of 10 targets [
-            die]
-          set british_casualties british_casualties + 10
+          ifelse count targets < kills-per-hit [
+            set british_casualties british_casualties + count targets
+            ask targets[
+              die
+            ]
+          ]
+          [
+            set british_casualties british_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
   			]
   		]
     ]
@@ -800,15 +855,25 @@ to american-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the musket once every 60 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
         if did-hit? .15 [
           ;; Reduce targets based on kills per hit
-          ask n-of 9 targets [
-            die]
-          set british_casualties british_casualties + 9
-  			]
-  		]
+          ifelse count targets < kills-per-hit [
+            set british_casualties british_casualties + count targets
+            ask targets[
+              die
+            ]
+          ]
+          [
+            set british_casualties british_casualties + kills-per-hit
+            ask n-of kills-per-hit targets
+            [
+              die
+            ]
+          ]
+        ]
+      ]
     ]
   ]
   print (word "British casualties: " british_casualties)
@@ -895,6 +960,7 @@ to update-turtle-behavior
       ; Daytime behavior, normal energy consumption.
       set energy energy - 1
     ]
+    set reload-index reload-index + 1
   ]
 end
 
@@ -911,6 +977,28 @@ to check-victory-condition
     output-print (word "Victory for the British!")
     ]
 end
+
+;------------------------------------------------------------------
+;TODO handle elevation effects
+to-report elevation-effect [firing-range current-elevation]
+  if current-elevation < 100 [
+    report firing-range * 1.1
+  ]
+  report firing-range
+end
+
+to-report did-hit? [acc]
+  ;add effects on accuracy here (elevation, target patch, etc)
+  let newacc acc
+  ifelse random-float 1 < newacc
+  [
+    report true
+  ]
+  [
+    report false
+  ]
+end
+
 
 ;;CHANGES made 3/21
 ;;PATCH IS 6 FT X 6 FT
