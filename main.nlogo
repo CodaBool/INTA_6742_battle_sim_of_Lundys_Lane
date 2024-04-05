@@ -851,7 +851,7 @@ to update-environment
   ;; will be daylight before this tick number
   let night-at-tick nighttime
 
-
+  ; if not night, do sunset/turn to night. If is night, then just skip.
   ifelse isNight [
 
   ][
@@ -868,6 +868,10 @@ to update-environment
     ]
     if ticks > night-at-tick[
       set isNight true
+      ask turtles[
+        set firingrange firingrange * 0.5  ; Decrease firing range and accuracy by 50%
+        set accuracy accuracy * 0.5
+      ]
       ask patches [
         ;; some pcolors are a list and require building a number from their RGBA
         ifelse is-number? pcolor [
@@ -887,8 +891,6 @@ to update-turtle-behavior
     ifelse isNight [
       ; Adjust turtle behavior for night, e.g., reduce visibility range and increase energy consumption.
       set energy energy - 1.5 ; Increase energy depletion rate at night.
-      set firingrange firingrange * 0.5  ; Decrease firing range and accuracy by 50%
-      set accuracy accuracy * 0.5
     ] [
       ; Daytime behavior, normal energy consumption.
       set energy energy - 1
