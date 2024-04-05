@@ -7,7 +7,8 @@ globals [
   british_casualties
   walk
   reload-index
-  hit-roll
+  nighttime
+  bayonet-acc
 ]
 
 breed [british-infantry-West british-infantry-West-s]      ;; British infantry
@@ -44,6 +45,11 @@ turtles-own [
   firing-rate            ; Rate of fire for the turtle
   max-shots              ; Maximum number of shots the turtle can fire
   reload                 ; Determines how many ticks before the turtle is ready to fire
+  shots
+  target
+  faction
+  debug-movement-x
+  debug-movement-y
 ]
 
 to setup
@@ -55,7 +61,8 @@ to setup
   set american_casualties 0
   set british_casualties 0
   set reload-index 0
-  set hit-roll 0
+  set nighttime 540
+  set isNight false
 end
 
 
@@ -63,7 +70,7 @@ end
 to setup-map
   clear-all
   resize-world -250 300 -250 250 ;; set the world size
-  set-patch-size 1 ;; this is 5x5 ft real life
+  set-patch-size 1 ;; this is 6x6 ft real life
 
   ;; Set up hills, woods, and plains
   ask patches [
@@ -126,7 +133,7 @@ to setup-map
 end
 
 to setup-turtles
-  set walk 1
+  set walk 3.3
   ; Setup British infantry
   create-british-infantry-West 1125 [
     set color red
@@ -142,6 +149,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 3.5 / 60 ; 3.5 per minute converted to per second
     set max-shots 80
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -159,6 +168,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 3.5 / 60 ; 3.5 per minute converted to per second
     set max-shots 80
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -176,6 +187,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 3.5 / 60 ; 3.5 per minute converted to per second
     set max-shots 80
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -195,6 +208,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 7 / 60 ; 7 per minute converted to per second
     set max-shots 40
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -214,6 +229,8 @@ to setup-turtles
     set kills-per-hit 9
     set firing-rate 2 / 60 ; 2 per minute converted to per second
     set max-shots 110
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -232,6 +249,8 @@ to setup-turtles
     set kills-per-hit 40
     set firing-rate 1 / 60 ; 1 per minute converted to per second
     set max-shots 150
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -250,6 +269,8 @@ to setup-turtles
     set kills-per-hit 9
     set firing-rate 1 / 60 ; 1 per minute converted to per second
     set max-shots 110
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -268,6 +289,8 @@ to setup-turtles
     set kills-per-hit 9
     set firing-rate 2 / 60 ; 1 per minute converted to per second
     set max-shots 110
+    set shots 0
+    set faction 0
     set retreating False
   ]
 
@@ -285,6 +308,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 2 / 60 ; 2 per minute converted to per second
     set max-shots 80
+    set faction 1
+    set shots 0
 
   ]
     create-Jessups-infantry 380 [
@@ -299,6 +324,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 2 / 60 ; 2 per minute converted to per second
     set max-shots 80
+    set shots 0
+    set faction 1
     set retreating False
   ]
 
@@ -315,6 +342,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 2 / 60 ; 2 per minute converted to per second
     set max-shots 80
+    set shots 0
+    set faction 1
     set retreating False
   ]
 
@@ -332,6 +361,8 @@ to setup-turtles
     set kills-per-hit 0.13
     set firing-rate 7 / 60 ; 7 per minute converted to per second
     set max-shots 40
+    set shots 0
+    set faction 1
     set retreating False
   ]
 
@@ -350,6 +381,8 @@ to setup-turtles
     set kills-per-hit 9
     set firing-rate 2 / 60 ; 2 per minute converted to per second
     set max-shots 110
+    set shots 0
+    set faction 1
     set retreating False
   ]
 
@@ -368,6 +401,8 @@ to setup-turtles
     set kills-per-hit 10
     set firing-rate 1 / 60 ; 2 per minute converted to per second
     set max-shots 110
+    set shots 0
+    set faction 1
     set retreating False
   ]
 
@@ -386,6 +421,8 @@ to setup-turtles
     set kills-per-hit 9
     set firing-rate 1 / 60 ; 1 per minute converted to per second
     set max-shots 110
+    set shots 0
+    set faction 1
     set retreating False
   ]
 end
@@ -398,13 +435,15 @@ to go
   [
     stop
   ]
-    set hit-roll random-float 1
-    move-turtles
-    british-attack
-    american-attack
-    update-energy
-    update-environment
-    check-victory-condition
+  move-turtles
+  british-attack
+  american-attack
+  update-energy
+  update-environment
+  check-victory-condition
+
+  if ticks >= 60
+  [
     retreat-if-loss american-cavalry 70 * .9 180 -210
     retreat-if-loss american-volunteers 546 * .6 180 -210
     retreat-if-loss american-infantry 1504 * .6 180 -210
@@ -412,13 +451,15 @@ to go
     retreat-if-loss british-infantry-East 1125 * .7 0 200
     retreat-if-loss British-Infantry-Mid 1125 * .7 0 200
     retreat-if-loss British-Infantry-West 1125 * .7 0 200
-    set reload-index reload-index + 1
-    tick
-    print word "Ticks: " ticks
+  ]
+  tick
+  print word "Ticks: " ticks
 end
+
 to move-turtles
-  if ticks >= 60[
-  ask american-infantry [
+  if ticks >= 20
+  [
+    ask american-infantry [
       ; Calculate the angle towards the target position
       let angle -45
 
@@ -427,8 +468,8 @@ to move-turtles
 
       ; Move the turtle forward
       if ycor <= 75 [
-      fd speed
-    ]
+        fd speed
+      ]
       ; Check if they are within a certain range of the hill to simulate capturing it
       ifelse terrain = "hill" [
         ; If the turtle is on the hill, simulate capturing it
@@ -451,8 +492,8 @@ to move-turtles
 
       ; Move the turtle forward
       if ycor <= 75 [
-      fd speed
-    ]
+        fd speed
+      ]
       ; Check if they are within a certain range of the hill to simulate capturing it
       ifelse terrain = "hill" [
         ; If the turtle is on the hill, simulate capturing it
@@ -465,34 +506,36 @@ to move-turtles
         ]
       ]
     ]
-   ask american-cavalry [
-  ; Set the heading to -10 degrees
-  set heading -19.5
-
-  ; Move the turtle forward until it reaches y-coordinate 80
-  if ycor <= 100  [
-        if ycor >= -200[
-          fd speed]
-  ]]]
-
-ask Jessups-infantry [
-  ; Set the heading to -10 degrees
-  set heading -15
-
-  ; Check if there are nearby enemies within 5 patches
-  let nearby-enemies turtles in-radius 15 with [breed = british-infantry-east]
-
-  ifelse any? nearby-enemies [
-    ; If there are nearby enemies, stop moving
-    stop
-  ] [
-    ; If no nearby enemies, continue moving
-    if ticks >= 53  [
-      set heading -90
-    ]
-    fd speed * 1.1
   ]
-]
+  ask american-cavalry [
+    ; Set the heading to -10 degrees
+    set heading -19.5
+
+    ; Move the turtle forward until it reaches y-coordinate 80
+    if ycor <= 100  [
+      if ycor >= -200[
+        fd speed]
+  ]]
+
+
+  ask Jessups-infantry [
+    ; Set the heading to -10 degrees
+    set heading -15
+
+    ; Check if there are nearby enemies within 5 patches
+    let nearby-enemies turtles in-radius 15 with [breed = british-infantry-east]
+
+    ifelse any? nearby-enemies [
+      ; If there are nearby enemies, stop moving
+      stop
+    ] [
+      ; If no nearby enemies, continue moving
+      if ticks >= 53  [
+        set heading -90
+      ]
+      fd speed * 1.1
+    ]
+  ]
 end
 
 
@@ -513,6 +556,17 @@ to retreat-if-loss [breed-name threshold retreat-direction regroup-position]
   ]
 end
 
+to-report did-hit? [acc]
+  ifelse random-float 1 < acc
+  [
+    report true
+  ]
+  [
+    report false
+  ]
+end
+
+
 to british-attack
   ask british-cannon-6-pound [
     ;; Check for nearby enemies within firing range
@@ -520,9 +574,9 @@ to british-attack
     ;; Check if there are any targets available
     if any? targets [
       ;; Fire the cannon once every 30 ticks
-      if reload-index mod reload = 0 [
+      if reload-index mod reload < 1 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .5 [
+        if did-hit? accuracy [
           ;; Reduce targets based on kills per hit
           ask n-of 4 targets [
             die
@@ -540,7 +594,7 @@ to british-attack
       ;; Fire the cannon once every 60 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .25 [
+        if did-hit? .25 [
           ;; Reduce targets based on kills per hit
           ask n-of 20 targets [
             die]
@@ -557,7 +611,7 @@ to british-attack
       ;; Fire the cannon once every 60 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .2 [
+        if did-hit? .2 [
           ;; Reduce targets based on kills per hit
           ask n-of 9 targets [
             die]
@@ -574,7 +628,7 @@ to british-attack
       ;; Fire the cannon once every 120 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .005 [
+        if did-hit? .005 [
           ;; Reduce targets based on kills per hit
           ask n-of 9 targets [
             die]
@@ -592,7 +646,7 @@ to british-attack
       ;; Fire the musket once every 17 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .01 [
+        if did-hit? accuracy [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
             die]
@@ -609,7 +663,7 @@ to british-attack
       ;;; Fire the musket once every 17 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .01 [
+        if did-hit? .01 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
             die]
@@ -626,7 +680,7 @@ to british-attack
       ;; Fire the musket once every 17 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .02 [
+        if did-hit? .02 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
             die]
@@ -647,7 +701,7 @@ to american-attack
       ;; Fire the musket once every 17 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll <= 0.02 [
+        if did-hit? 0.02 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
             die]
@@ -664,7 +718,7 @@ to american-attack
       ;; Fire the musket once every 17 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll <= 0.02 [
+        if did-hit? 0.02 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
             die]
@@ -681,7 +735,7 @@ to american-attack
       ;; Fire the musket once every 9 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll <= 0.02 [
+        if did-hit? 0.02 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
           die]
@@ -697,7 +751,7 @@ to american-attack
     if any? targets [
       ;; Fire the musket once every 30 ticks
       if reload-index mod reload = 0 [
-          if hit-roll <= 0.015 [
+          if did-hit? 0.015 [
           ;; Reduce targets based on kills per hit
           ask n-of 1 targets [
           die]
@@ -714,7 +768,7 @@ to american-attack
       ;; Fire the musket once every 30 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .15 [
+        if did-hit? .15 [
           ;; Reduce targets based on kills per hit
           ask n-of 4 targets [
             die]
@@ -731,7 +785,7 @@ to american-attack
       ;; Fire the musket once every 60 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .15 [
+        if did-hit? .15 [
           ;; Reduce targets based on kills per hit
           ask n-of 10 targets [
             die]
@@ -748,7 +802,7 @@ to american-attack
       ;; Fire the musket once every 60 ticks
       if reload-index mod reload = 0 [
         ;; Check if the attack hits based on accuracy
-        if hit-roll < .15 [
+        if did-hit? .15 [
           ;; Reduce targets based on kills per hit
           ask n-of 9 targets [
             die]
@@ -760,7 +814,19 @@ to american-attack
   print (word "British casualties: " british_casualties)
 end
 
+to move [x y]
+  ; find a path to desired location
+  ; check if I've made it to my desired location, and check objective if already there
 
+  ; Allows us to know where a turtle is headed
+  set debug-movement-x x
+  set debug-movement-y y
+
+  facexy x y
+  ifelse (count [turtles-here] of patch-ahead 1) < 5
+    [ fd speed ]
+  [ fd speed * .25 ]
+end
 
 
 ;; Update energy for all moving turtles; this will be called whenever a turtle moves.
@@ -783,13 +849,13 @@ to update-environment
   ; Condition to toggle day/night
 
   ;; will be daylight before this tick number
-  let night-at-tick 180
-  ifelse ticks < night-at-tick [
-    set isNight false
+  let night-at-tick nighttime
 
-    ;; interupt daylight for sunset right before nighttime
-    ;; sunset is currently just visual and does not affect simulation
-    if ticks > night-at-tick - 20 [
+
+  ifelse isNight [
+
+  ][
+    if ticks > night-at-tick - 60 [
       ask patches [
         ;; some pcolors are a list and require building a number from their RGBA
         ifelse is-number? pcolor [
@@ -800,16 +866,16 @@ to update-environment
         ]
       ]
     ]
-  ] [
-    set isNight true
-    ;ask patches [ set pcolor scale-color green ticks 20 00 ]
-    ask patches [
-      ;; some pcolors are a list and require building a number from their RGBA
-      ifelse is-number? pcolor [
-        set pcolor scale-color pcolor 10 00 100
-      ] [
-        let color-number (item 0 pcolor * 65536) + (item 1 pcolor * 256) + item 2 pcolor
-        set pcolor scale-color color-number 10 00 100
+    if ticks > night-at-tick[
+      set isNight true
+      ask patches [
+        ;; some pcolors are a list and require building a number from their RGBA
+        ifelse is-number? pcolor [
+          set pcolor scale-color pcolor 10 00 100
+        ] [
+          let color-number (item 0 pcolor * 65536) + (item 1 pcolor * 256) + item 2 pcolor
+          set pcolor scale-color color-number 10 00 100
+        ]
       ]
     ]
   ]
@@ -844,8 +910,6 @@ to check-victory-condition
     ]
 end
 
-
-
 ;;CHANGES made 3/21
 ;;PATCH IS 6 FT X 6 FT
 ;;TICK IS 1 MIN
@@ -856,11 +920,11 @@ end
 ;; RETREAT PROCEDURE (done)
 ;; ALL TROOPS ATTACKING (done)
 ;; BRITISH TROOP DISTRIBUTION
-
+;; implement the nightfall
 
 
 ;;AFTER RECORD
-;; implement the nightfall
+
 ;; Minimum effective range for artillery?
 ;; cavalry don't shoot jessusp
 ;; convert spaghetti code into clean code (make functions)
@@ -921,7 +985,7 @@ BUTTON
 160
 Go (toggle forever to stop)
 go
-NIL
+T
 1
 T
 OBSERVER
@@ -959,7 +1023,7 @@ location-policy
 location-policy
 0
 10
-2.0
+10.0
 1
 1
 NIL
